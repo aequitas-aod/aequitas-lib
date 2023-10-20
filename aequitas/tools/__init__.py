@@ -8,9 +8,11 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.naive_bayes import GaussianNB
+from sklearn.naive_bayes import GaussianNB, CategoricalNB
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from sklearn import svm
+from sklearn.base import BaseEstimator, ClassifierMixin
+
 
 # ------------------- Global Parameters ------------------- 
 
@@ -127,6 +129,185 @@ def _check_numerical_features(data: pd.DataFrame):
             raise ValueError(f"{st_e_msg}Aequitas.Error: Feature: '{column}' contains text values. Please convert to numeric for the analysis.{nd_e_msg}")
 
 
+# ------------------------ Classes ------------------------
+
+
+""" Class: Hybrid Naive Bayes Classifier 
+
+    Description:
+        A Hybrid Naive Bayes Classifier that uses categorical features as default but the user can specify normal features as well. 
+
+    Parameters:
+        - normal_features (list): A list of all the features that presumably have normal distribution
+    Returns:
+        - A ClassifierMixin scikit-learn object
+"""
+class HybridNaiveBayesClassifier(BaseEstimator, ClassifierMixin):
+    
+
+    """ Function: Contructor
+
+    Description:
+        Set parameters to the Hybrid Naive Bayes Classifier.
+
+    Parameters:
+        - normal_features (list): A list of all the features that presumably have normal distribution
+
+    """
+    def __init__(self, normal_features: list = []):
+
+        # get normal features
+        self.normal_features = normal_features
+
+        # Initialize separate Categorical and Gaussian NB classifiers
+        self.categorical_classifier = CategoricalNB()
+        self.gaussian_classifier = GaussianNB()
+
+
+    """ Function: Fit classifier
+
+    Description:
+        Splits the model into two Nayve bayes, one for categorical and one for normal features
+
+    Parameters:
+        - X (pd.DataFrame): The training X sample
+        - Y (pd.DataFrame): The training Y sample (class attribute values)
+
+    """
+    def fit(self, X: pd.DataFrame, y: pd.Series, sample_weight:list = []):
+
+        self.features=list(X.columns)
+
+        categorical_features=[]
+        for feature in self.features:
+            if feature not in self.normal_features:
+                categorical_features.append(feature)
+        self.categorical_features=categorical_features
+
+
+        if (len(self.categorical_features)>0):
+
+            if (len(sample_weight)>0):
+                self.categorical_classifier.fit(X[self.categorical_features], y, sample_weight=sample_weight)
+            else:
+                self.categorical_classifier.fit(X[self.categorical_features], y)
+
+            self.class_prior=np.exp(self.categorical_classifier.class_log_prior_).copy()
+            self.classes=self.categorical_classifier.classes_.copy()
+
+        if (len(self.normal_features)>0):
+
+            if (len(sample_weight)>0):
+                self.gaussian_classifier.fit(X[self.normal_features], y, sample_weight=sample_weight)
+            else:
+                self.gaussian_classifier.fit(X[self.normal_features], y)
+            
+            self.class_prior=self.gaussian_classifier.class_prior_.copy()
+            self.classes=self.gaussian_classifier.classes_.copy()
+        
+        return self
+
+    """ Function: Predict probabilities of Hybrid Naive Bayes.
+
+    Description:
+        predicts both models probabilities and combines them to one model.
+
+    Parameters:
+        - X (pd.DataFrame): The test X sample
+    
+    Returns:
+        - probabilities (np.ndarray): The classifier probabilities of each Y sample entry
+
+    """
+    def predict_proba(self, X: pd.DataFrame)->np.ndarray:
+
+        # check test features
+        if len(X.columns)!=len(self.features):
+            raise ValueError(f"Aequitas.Error: HybridNaiveBayesClassifier requires the same number of features between train and test samples.")            
+
+        for feat in X.columns:
+            if feat not in self.features:
+                raise ValueError(f"Aequitas.Error: HybridNaiveBayesClassifier requires the same features between train and test samples.")
+
+        # compute categorical probabilities
+        if (len(self.categorical_features)>0):
+            X_categorical=X.copy()
+            X_categorical=X_categorical[self.categorical_features]
+
+            probs_categorical = self.categorical_classifier.predict_proba(X_categorical)
+
+            if (len(self.normal_features)==0):
+                return probs_categorical
+
+            nc=len(self.classes)
+            nr=len(probs_categorical)
+            for i in range(nr):
+                for j in range(nc):
+                    probs_categorical[i][j]=probs_categorical[i][j]/self.class_prior[j]
+
+        # compute normal probabilities
+        if (len(self.normal_features)>0):
+            X_normal=X.copy()
+            X_normal=X_normal[self.normal_features]
+
+            probs_normal = self.gaussian_classifier.predict_proba(X_normal)
+
+            if (len(self.categorical_features)==0):
+                return probs_normal
+
+            nc=len(self.classes)
+            nr=len(probs_normal)
+            for i in range(nr):
+                for j in range(nc):
+                    probs_normal[i][j]=probs_normal[i][j]/self.class_prior[j]
+
+        # combine probabilities
+        nc=len(self.classes)
+        nr=len(probs_categorical)
+        temp=np.zeros((nr,nc))
+        for i in range(nr):
+            for j in range(nc):
+                temp[i][j]=self.class_prior[j]*probs_categorical[i][j]*probs_normal[i][j]
+
+        # normalize combined probabilities
+        colsums=np.sum(temp, axis=1)
+        probs=np.zeros((nr,nc))
+        for i in range(nr):
+            for j in range(nc):
+                probs[i][j]=temp[i][j]/colsums[i]
+        
+        return probs
+
+
+    """ Function: Predict classification, Hybrid Naive Bayes.
+
+    Description:
+        Predicts based on the two Naive Bayes classifiers.
+
+    Parameters:
+        - X (pd.DataFrame): The test X sample
+    
+    Returns:
+        - pred (np.ndarray): The prediction vector
+
+    """
+    def predict(self, X:pd.DataFrame)->np.ndarray:
+
+        # compute class probabilities
+        probabilities=self.predict_proba(X)
+
+        # get classes
+        if (len(self.categorical_features)>0):
+            classes=self.categorical_classifier.classes_
+        else:
+            classes=self.gaussian_classifier.classes_
+
+        # classify
+        pred=classes[np.argmax(probabilities, axis=1)]
+
+        return pred
+
+
 # -------------------- Public Functions -------------------
 
 
@@ -165,7 +346,7 @@ def train_classifier(training_sample: pd.DataFrame, class_attribute: str, ctype:
         clf = KNeighborsClassifier(**params)
 
     if (ctype=="Naive_Bayes"):
-        clf = GaussianNB(**params)
+        clf = HybridNaiveBayesClassifier(**params)
 
     if (ctype=="Logistic_Regression"):
         clf = LogisticRegression(**params)
