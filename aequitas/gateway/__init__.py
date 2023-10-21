@@ -95,6 +95,10 @@ class Gateway:
 
     # ------------------- Private Functions -------------------
 
+    """ Function: Compose a storage path for the element on fs 
+        Description: n/a
+        TODO: let useer set a working directory / name for this storage.
+    """
     def _get_fs_path(self, element_key=None, data_version=None):
         path = f'{self._gw_name}/{self.pid}'
         if element_key is not None:
