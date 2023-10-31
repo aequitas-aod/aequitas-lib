@@ -5,7 +5,7 @@ from .authentication import Authentication
 from .projects import Projects as projects
 
 
-class Aequitas_Context():
+class Aequitas():
     def __init__(self, aequitas_host: str = 'localhost:9000', authentication: Authentication= None):
         self.aequitas_host = aequitas_host
         self.authentication = authentication
