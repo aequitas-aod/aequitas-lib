@@ -22,7 +22,7 @@ jobs:
         run: echo version=$(python setup.py get_minimum_python_version | tail -n 1) >> $GITHUB_OUTPUT
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: ${{ steps.get-python-version.outputs.version }}
 
@@ -30,13 +30,13 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       # - name: Change default logging level
-      #   run: sed -i -e 's/DEBUG/WARN/g' aequitas-lib/__init__.py
+      #   run: sed -i -e 's/DEBUG/WARN/g' aequitas/__init__.py
 
       - name: Get Node Version
         id: get-node-version
         run: echo version=$(jq -r .engines.node package.json) >> $GITHUB_OUTPUT
 
-      - uses: actions/setup-node@v3
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ steps.get-node-version.outputs.version }}
 
