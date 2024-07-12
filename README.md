@@ -1,3 +1,58 @@
+# Project Name
+
+Aequitas Project core library.
+
+## Installation
+
+### Clone the Repository
+
+First, clone the repository to your local machine using `git`.
+
+```bash
+git clone https://github.com/aequitas-aod/aequitas-lib.git
+cd aequitas-lib
+```
+
+### Set Up Python Environment
+
+Use Conda to create and manage the environment:
+
+Make sure you have Conda installed. You can download it from the official Anaconda website.
+
+Create a Conda environment:
+
+   ```bash
+   conda create --name myenv python=3.10
+   ```
+
+Activate the Conda environment:
+
+   ```bash
+   conda activate myenv
+   ```
+
+### Install Requirements
+
+Install the required packages from `requirements.txt`:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+Set up Jupyter in the Conda environment:
+
+   ```bash
+   conda install -n myenv ipykernel --update-deps --force-reinstall
+   ```
+
+### Run Jupyter Notebooks
+
+Navigate to the `examples` folder:
+
+   ```bash
+   cd examples
+   ```
+
 # Python project template
 
 A simple template of a Python project, with a rigid file structure, and predisposition for unit testing and release on PyPi.
