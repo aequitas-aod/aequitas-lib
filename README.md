@@ -9,7 +9,7 @@ Aequitas Project core library.
 First, clone the repository to your local machine using `git`.
 
 ```bash
-git clone https://github.com/aequitas-aod/aequitas-lib.git
+git clone --branch demo_3_1 https://github.com/aequitas-aod/aequitas-lib.git
 cd aequitas-lib
 ```
 
@@ -17,7 +17,7 @@ cd aequitas-lib
 
 Use Conda to create and manage the environment:
 
-Make sure you have Conda installed. You can download it from the official Anaconda website.
+Make sure you have Conda installed. You can download it from the [official Anaconda website](https://www.anaconda.com/products/distribution).
 
 Create a Conda environment:
 
@@ -52,6 +52,15 @@ Navigate to the `examples` folder:
    ```bash
    cd examples
    ```
+
+## Usage
+
+If you want to use the gateway module with the prototype version of the context engine, you should use the following URL to connect:
+
+   ```bash
+   gw = Gateway('review', host='http://rain.cs.umu.se/aeq/')
+   ```
+
 
 # Python project template
 
